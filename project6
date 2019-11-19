@@ -1,0 +1,459 @@
+#include<stdio.h>
+#include<string.h>
+#include<math.h>
+#define N 150//每行的最大长度-1
+#define M 300//最大符号数
+//parser
+//备注：只是一个实验品，把D根目录下的tri.txt文件中的汇编语言（其实应该是.asm）翻译成tri.hack机器语言
+//对代码有一点要求：格式不能过于乱……
+int hasMoreCommands(FILE *fp,char command[N])//-1误，0正常
+{
+	if(fgets(command,N-1,fp)==NULL)
+		return -1;
+	else return 0;
+}
+void commandType(char command[N],char *type)//-1误，0正常
+{
+	switch(command[0])
+	{
+	case '(':
+		strcpy(type,"L_COMMAND");break;
+	case '@':
+		strcpy(type,"A_COMMAND");break;
+	case '/':
+		strcpy(type,"annotaton");break;
+	case ' ':
+		strcpy(type,"aspace");break;
+	default:
+		strcpy(type,"C_COMMAND");
+	}
+}
+void symbol(char command[N],char *sym)//-1误，0正常
+{
+	char type[10];
+	int i;
+	commandType(command,type);
+	if(type[0]=='A')
+	{
+		strcpy(sym,&command[1]);
+		sym[strlen(command)-2]='\0';
+	}
+	else if(type[0]=='L')
+	{
+		strcpy(sym,command);
+		for(i=0;sym[i]!='\0';i++)
+			if(sym[i]==')')sym[i]='\0';
+	}
+}
+void dest(char command[N],char dest[N])
+{
+
+	int i,j;
+
+	for(i=0;command[i]!='\n'&&command[i]!='\0';i++)
+	{
+		if(command[i]=='=')break;
+	}
+	if(command[i]=='\n'||command[i]=='\0')
+		strcpy(dest,"null");
+	else 
+	{
+		for(j=0;j<i;j++)
+			dest[j]=command[j];
+		dest[i]='\0';
+	}
+}
+void comp(char command[N],char comp[N])
+{
+
+	int i,j;
+
+	for(i=0;command[i]!='\n'&&command[i]!='\0';i++)
+	{
+		if(command[i]=='=')break;
+	}
+	if(command[i]=='=')
+	{
+		for(j=0;command[i+j+1]!='\0'&&command[i+j+1]!='\n'&&command[i+j+1]!=';';j++)
+		{
+			comp[j]=command[i+j+1];
+		}
+		comp[j]='\0';
+	}
+	else 
+	{
+		for(j=0;command[j]!='\0'&&command[j]!='\n'&&command[j]!=';';j++)
+		{
+			comp[j]=command[j];
+		}
+		comp[j]='\0';
+	}
+}
+void jump(char command[N],char jump[N])
+{
+
+	int i,j;
+
+	for(i=0;command[i]!='\n'&&command[i]!='\0';i++)
+	{
+		if(command[i]==';')break;
+	}
+	if(command[i]==';')
+	{
+		for(j=0;command[i+j+1]!='\n'&&command[i+j+1]!='\0';j++)
+		{
+			jump[j]=command[i+j+1];
+		}
+		jump[j]='\0';
+	}
+	else strcpy(jump,"null");
+}
+//code
+void codedest(char command[N],char bindest[N])
+{
+	char asmdest[N];
+	dest(command,asmdest);
+	if(!(bool)strcmp(asmdest,"null"))
+		strcpy(bindest,"000");           //记得到时候定义长度为Ⅳ
+	else if(!(bool)strcmp(asmdest,"M"))
+		strcpy(bindest,"001");
+	else if(!(bool)strcmp(asmdest,"D"))
+		strcpy(bindest,"010");
+	else if(!(bool)strcmp(asmdest,"MD"))
+		strcpy(bindest,"011");
+	else if(!(bool)strcmp(asmdest,"A"))
+		strcpy(bindest,"100");
+	else if(!(bool)strcmp(asmdest,"AM"))
+		strcpy(bindest,"101");
+	else if(!(bool)strcmp(asmdest,"AD"))
+		strcpy(bindest,"110");
+	else if(!(bool)strcmp(asmdest,"AMD"))
+		strcpy(bindest,"111");
+	else strcpy(bindest,"v");
+}
+void codecomp(char command[N],char bincomp[N])
+{
+	char asmcomp[N];
+	comp(command,asmcomp);
+	if(!(bool)strcmp(asmcomp,"0"))
+		strcpy(bincomp,"0101010");           //记得到时候定义长度为8
+	else if(!(bool)strcmp(asmcomp,"1"))      //下次，结构体，请
+		strcpy(bincomp,"0111111");
+	else if(!(bool)strcmp(asmcomp,"-1"))
+		strcpy(bincomp,"0111010");
+	else if(!(bool)strcmp(asmcomp,"D"))
+		strcpy(bincomp,"0001100");
+	else if(!(bool)strcmp(asmcomp,"A"))
+		strcpy(bincomp,"0110000");
+	else if(!(bool)strcmp(asmcomp,"!D"))
+		strcpy(bincomp,"0001101");
+	else if(!(bool)strcmp(asmcomp,"!A"))
+		strcpy(bincomp,"0110001");
+	else if(!(bool)strcmp(asmcomp,"-D"))
+		strcpy(bincomp,"0001111");
+	else if(!(bool)strcmp(asmcomp,"-A"))
+		strcpy(bincomp,"0110011");
+	else if(!(bool)strcmp(asmcomp,"D+1"))
+		strcpy(bincomp,"0011111");
+	else if(!(bool)strcmp(asmcomp,"A+1"))
+		strcpy(bincomp,"0110111");
+	else if(!(bool)strcmp(asmcomp,"D-1"))
+		strcpy(bincomp,"0001110");
+	else if(!(bool)strcmp(asmcomp,"A-1"))
+		strcpy(bincomp,"0110010");
+	else if(!(bool)strcmp(asmcomp,"D+A"))
+		strcpy(bincomp,"0000010");
+	else if(!(bool)strcmp(asmcomp,"D-A"))
+		strcpy(bincomp,"0010011");
+	else if(!(bool)strcmp(asmcomp,"A-D"))
+		strcpy(bincomp,"0000111");
+	else if(!(bool)strcmp(asmcomp,"D&A"))
+		strcpy(bincomp,"0000000");
+	else if(!(bool)strcmp(asmcomp,"D|A"))
+		strcpy(bincomp,"0010101");
+
+	else if(!(bool)strcmp(asmcomp,"M"))
+		strcpy(bincomp,"1110000");
+	else if(!(bool)strcmp(asmcomp,"!M"))
+		strcpy(bincomp,"1110001");
+	else if(!(bool)strcmp(asmcomp,"-M"))
+		strcpy(bincomp,"1110011");
+	else if(!(bool)strcmp(asmcomp,"M+1"))
+		strcpy(bincomp,"1110111");
+	else if(!(bool)strcmp(asmcomp,"M-1"))
+		strcpy(bincomp,"1110010");
+	else if(!(bool)strcmp(asmcomp,"M"))
+		strcpy(bincomp,"1110000");
+	else if(!(bool)strcmp(asmcomp,"D+M"))
+		strcpy(bincomp,"1000010");
+	else if(!(bool)strcmp(asmcomp,"D-M"))
+		strcpy(bincomp,"1010011");
+	else if(!(bool)strcmp(asmcomp,"M-D"))
+		strcpy(bincomp,"1000111");
+	else if(!(bool)strcmp(asmcomp,"D&M"))
+		strcpy(bincomp,"1000000");
+	else if(!(bool)strcmp(asmcomp,"D|M"))
+		strcpy(bincomp,"1010101");
+}
+void codejump(char command[N],char binjump[N])
+{
+	char asmjump[N];
+	jump(command,asmjump);
+	if(!(bool)strcmp(asmjump,"null"))
+		strcpy(binjump,"000");           //记得到时候定义长度为Ⅳ
+	else if(!(bool)strcmp(asmjump,"JGT"))
+		strcpy(binjump,"001");
+	else if(!(bool)strcmp(asmjump,"JEQ"))
+		strcpy(binjump,"010");
+	else if(!(bool)strcmp(asmjump,"JGE"))
+		strcpy(binjump,"011");
+	else if(!(bool)strcmp(asmjump,"JLT"))
+		strcpy(binjump,"100");
+	else if(!(bool)strcmp(asmjump,"JNE"))
+		strcpy(binjump,"101");
+	else if(!(bool)strcmp(asmjump,"JLE"))
+		strcpy(binjump,"110");
+	else if(!(bool)strcmp(asmjump,"JMP"))
+		strcpy(binjump,"111");
+}
+int error()
+{
+	printf("error");
+	return -1;
+}
+long long binary(int x)
+{
+	long long int b=0;
+	while(x!=0)
+	{
+		int i;
+		for(i=0;x!=0;i++)
+		{
+			b+=(x%2)*pow(10.,i);
+			x/=2;
+		}
+	}
+	return b;
+}
+int NumInACommand(char command[N])
+{
+	int n=0,i;
+	for(i=1;command[i]!='\n'&&command[i]!='\0';i++)
+	{
+		n=n*10+command[i]-'0';
+	}
+	return n;
+}
+//symboltable
+typedef struct symboltable {char symbol[N];int address; } symtab;
+void PreDefinedIn(symtab symtab[M])
+{
+	strcpy(symtab[0].symbol,"SP");
+	symtab[0].address=0;
+	strcpy(symtab[1].symbol,"LCL");
+	symtab[1].address=1;
+	strcpy(symtab[2].symbol,"ARG");
+	symtab[2].address=2;
+	strcpy(symtab[3].symbol,"THIS");
+	symtab[3].address=3;
+	strcpy(symtab[4].symbol,"THAT");
+	symtab[4].address=4;
+
+	strcpy(symtab[5].symbol,"SCREEN");
+	symtab[5].address=16384;
+	strcpy(symtab[6].symbol,"KBD");
+	symtab[6].address=24576;
+
+	strcpy(symtab[7].symbol,"R0");
+	symtab[7].address=0;
+	strcpy(symtab[8].symbol,"R1");
+	symtab[8].address=1;
+	strcpy(symtab[9].symbol,"R2");
+	symtab[9].address=2;
+	strcpy(symtab[10].symbol,"R3");
+	symtab[10].address=3;
+	strcpy(symtab[11].symbol,"R4");
+	symtab[11].address=4;
+	strcpy(symtab[12].symbol,"R5");
+	symtab[12].address=5;
+	strcpy(symtab[13].symbol,"R6");
+	symtab[13].address=6;
+	strcpy(symtab[14].symbol,"R7");
+	symtab[14].address=7;
+	strcpy(symtab[15].symbol,"R8");
+	symtab[15].address=8;
+	strcpy(symtab[16].symbol,"R9");
+	symtab[16].address=9;
+	strcpy(symtab[17].symbol,"R10");
+	symtab[17].address=10;
+	strcpy(symtab[18].symbol,"R11");
+	symtab[18].address=11;
+	strcpy(symtab[19].symbol,"R12");
+	symtab[19].address=12;
+	strcpy(symtab[20].symbol,"R13");
+	symtab[20].address=13;
+	strcpy(symtab[21].symbol,"R14");
+	symtab[21].address=14;
+	strcpy(symtab[22].symbol,"R15");
+	symtab[22].address=15;
+}
+void addEntry(symtab s,symtab symtab[M])
+{
+	static int array=23;
+	symtab[array]=s;
+	array++;
+}
+int GetAddress(char sym[N],symtab symtab[M])//两个函数合并了
+{
+	int i;
+	for(i=0;symtab[i].symbol[0]!='\0';i++)
+	{
+		if(!strcmp(sym,symtab[i].symbol))return symtab[i].address;
+	}
+	return -1;
+}
+//主函数
+int main()
+{
+	int hasMoreCommands(FILE *fp,char *command);
+	void commandType(char *command,char *type);
+	void symbol(char *command,char *sym);
+	void dest(char *command,char *dest);
+	void comp(char *command,char *comp);
+	void jump(char *command,char *jump);
+	void codedest(char *command,char *bindest);
+	void codecomp(char *command,char *bincomp);
+	void codejump(char *command,char *binjump);
+	int error();
+	long long binary(int x);
+	int NumInACommand(char *command);
+	symtab symtab1[M]={{{'\0'},0}};
+	char type[N],command[N];
+
+	FILE *fin,*fout,*temp,*tempx;
+	if(((fin=fopen("D:\\tri.asm","r"))==NULL)||(fout=fopen("D:\\tri.hack","w+"))==NULL)
+		return error();
+	//第一遍
+	fclose(fout);
+	temp=fopen("D:\\temp.il","w+");//中间文件,从asm(fin)—》il(temp)
+	int RomAddress=0;
+	PreDefinedIn(symtab1);
+	while(hasMoreCommands(fin,command)==0)
+	{
+		int i;
+		commandType(command,type);
+		switch(type[0])
+		{
+		case 'A':
+			RomAddress++;
+			for(i=0;command[i]!='\n'&&command[i]!='\0';i++)
+			{
+				if(command[i]=='/'||command[i]==' ')
+				{
+					command[i]='\0';
+					break;
+				}
+			}
+			fprintf(temp,"%s",command);
+			break;
+		case 'C':
+			RomAddress++;
+			for(i=0;command[i]!='\n'&&command[i]!='\0';i++)
+			{
+				if(command[i]=='/'||command[i]==' ')
+				{
+					command[i]='\0';
+					break;
+				}
+			}
+			fprintf(temp,"%s\n",command);
+			break;
+		case 'L': 
+			symtab sym;
+			for(i=1;command[i]!=')';i++)
+			{
+				sym.symbol[i-1]=command[i];
+			}
+			sym.symbol[i-1]='\0';
+			sym.address=RomAddress;
+			addEntry(sym,symtab1);
+			break;
+		case 'a':
+			break;
+		}
+	}//在il中输出去除注释，标签，空行的代码，将标签列入表，但变量还没列入；也未完成地址的替换。
+	fclose(fin);
+	fclose(temp);
+	//第二遍
+	temp=fopen("D:\\temp.il","r");
+	tempx=fopen("D:\\temp.ilx","w+");         //第二份中间文件
+	char SymIn[N];
+	int i=16;
+	while(hasMoreCommands(temp,command)==0)     //符号只在dest和@后面出现
+	{
+		commandType(command,type);
+		switch(type[0])
+		{
+		case 'A':
+			symbol(command,SymIn);
+			if(SymIn[0]>'9'||SymIn[0]<'0')
+			{
+				symtab sym;
+				strcpy(sym.symbol,SymIn);
+				if((sym.address=GetAddress(sym.symbol,symtab1))==-1)
+				{
+					sym.address=i;
+					i++;
+					addEntry(sym,symtab1);
+				}
+				fprintf(tempx,"@%d\n",sym.address);
+			}
+			else fprintf(tempx,"%s",command);
+			break;
+		case 'C':
+			char dest[N];
+			codedest(command,dest);
+			if(dest[0]=='v')
+			{
+				symtab sym;
+				strcpy(sym.symbol,dest);
+				if((sym.address=GetAddress(sym.symbol,symtab1))==-1)
+				{
+					sym.address=i;
+					i++;
+					addEntry(sym,symtab1);
+				}
+				fprintf(tempx,"@%d\n",sym.address);
+			}
+			else fprintf(tempx,"%s",command);
+			break;
+		}
+	}
+	fclose(temp);
+	fclose(tempx);
+	//终处理
+	tempx=fopen("D:\\temp.ilx","r");
+	fout=fopen("D:\\tri.hack","w+");
+	while(hasMoreCommands(tempx,command)==0)
+	{
+		commandType(command,type);
+		switch(type[0]) 
+		{
+		case'A':
+			int temp;
+			temp=NumInACommand(command);
+			fprintf(fout,"%016.0lf\n",(double)binary(temp));//fprintf
+			break;
+		case'C':
+			char dest[4],comp[8],jump[4];
+			codedest(command,dest);
+			codecomp(command,comp);
+			codejump(command,jump);
+			fprintf(fout,"111%s%s%s\n",comp,dest,jump);//fprintf
+			break;
+		}
+	}
+	fclose(tempx);
+	fclose(fout);
+	return 0;
+}
